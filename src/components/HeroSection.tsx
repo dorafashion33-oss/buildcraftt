@@ -69,8 +69,8 @@ const HeroSection = () => {
           <div className="gradient-border rounded-xl overflow-hidden bg-card">
             <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
               <div className="w-3 h-3 rounded-full bg-destructive/60" />
-              <div className="w-3 h-3 rounded-full bg-yellow-500/60" />
-              <div className="w-3 h-3 rounded-full bg-green-500/60" />
+              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(var(--dot-warning))' }} />
+              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(var(--dot-success))' }} />
               <span className="ml-3 text-xs font-mono text-muted-foreground">buildcraft — workspace</span>
             </div>
             <div className="flex min-h-[340px]">

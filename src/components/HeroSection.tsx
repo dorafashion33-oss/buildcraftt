@@ -1,14 +1,17 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles } from "lucide-react";
+import AuthDialog from "@/components/AuthDialog";
+import DemoDialog from "@/components/DemoDialog";
 
 const HeroSection = () => {
+  const [authOpen, setAuthOpen] = useState(false);
+  const [demoOpen, setDemoOpen] = useState(false);
+
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-      {/* Grid background */}
       <div className="absolute inset-0 grid-pattern opacity-30" />
-      
-      {/* Radial glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] bg-primary/5 rounded-full blur-[120px]" />
       <div className="absolute top-1/3 right-1/4 w-[400px] h-[400px] bg-accent/5 rounded-full blur-[100px]" />
 
@@ -50,11 +53,11 @@ const HeroSection = () => {
           transition={{ duration: 0.7, delay: 0.3 }}
           className="flex flex-col sm:flex-row items-center justify-center gap-4"
         >
-          <Button variant="hero" size="lg" className="text-base px-8 py-6">
+          <Button variant="hero" size="lg" className="text-base px-8 py-6" onClick={() => setAuthOpen(true)}>
             Start Building Free
             <ArrowRight className="w-4 h-4 ml-1" />
           </Button>
-          <Button variant="hero-outline" size="lg" className="text-base px-8 py-6">
+          <Button variant="hero-outline" size="lg" className="text-base px-8 py-6" onClick={() => setDemoOpen(true)}>
             Watch Demo
           </Button>
         </motion.div>
@@ -74,7 +77,6 @@ const HeroSection = () => {
               <span className="ml-3 text-xs font-mono text-muted-foreground">buildcraft — workspace</span>
             </div>
             <div className="flex min-h-[340px]">
-              {/* Sidebar */}
               <div className="w-56 border-r border-border p-4 hidden md:block">
                 <div className="space-y-2">
                   {["index.tsx", "Header.tsx", "Hero.tsx", "Features.tsx", "api/"].map((f, i) => (
@@ -84,7 +86,6 @@ const HeroSection = () => {
                   ))}
                 </div>
               </div>
-              {/* Code area */}
               <div className="flex-1 p-6 font-mono text-sm leading-7">
                 <div className="text-muted-foreground">
                   <span className="text-accent">const</span>{" "}
@@ -113,7 +114,6 @@ const HeroSection = () => {
                   <span className="text-primary">▍</span>
                 </motion.div>
               </div>
-              {/* Preview */}
               <div className="w-72 border-l border-border hidden lg:flex flex-col">
                 <div className="px-3 py-2 border-b border-border text-xs font-mono text-muted-foreground">Preview</div>
                 <div className="flex-1 flex items-center justify-center p-4">
@@ -127,10 +127,12 @@ const HeroSection = () => {
               </div>
             </div>
           </div>
-          {/* Glow under the card */}
           <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 w-3/4 h-20 bg-primary/10 blur-[60px] rounded-full" />
         </motion.div>
       </div>
+
+      <AuthDialog open={authOpen} onOpenChange={setAuthOpen} />
+      <DemoDialog open={demoOpen} onOpenChange={setDemoOpen} />
     </section>
   );
 };

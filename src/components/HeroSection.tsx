@@ -97,7 +97,7 @@ const HeroSection = () => {
                 <div className="pl-8">
                   <span className="text-primary/70">&lt;section</span>{" "}
                   <span className="text-accent/70">className</span>=
-                  <span className="text-green-400/80">"hero"</span>
+                  <span style={{ color: 'hsl(var(--syntax-string))' }}>"hero"</span>
                   <span className="text-primary/70">&gt;</span>
                 </div>
                 <div className="pl-12">

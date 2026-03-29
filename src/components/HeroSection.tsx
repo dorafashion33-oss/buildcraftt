@@ -2,12 +2,24 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import AuthDialog from "@/components/AuthDialog";
 import DemoDialog from "@/components/DemoDialog";
 
 const HeroSection = () => {
   const [authOpen, setAuthOpen] = useState(false);
   const [demoOpen, setDemoOpen] = useState(false);
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleGetStarted = () => {
+    if (user) {
+      navigate("/dashboard");
+    } else {
+      setAuthOpen(true);
+    }
+  };
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">

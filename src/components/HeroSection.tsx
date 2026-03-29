@@ -2,12 +2,24 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import AuthDialog from "@/components/AuthDialog";
 import DemoDialog from "@/components/DemoDialog";
 
 const HeroSection = () => {
   const [authOpen, setAuthOpen] = useState(false);
   const [demoOpen, setDemoOpen] = useState(false);
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleGetStarted = () => {
+    if (user) {
+      navigate("/dashboard");
+    } else {
+      setAuthOpen(true);
+    }
+  };
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
@@ -53,7 +65,7 @@ const HeroSection = () => {
           transition={{ duration: 0.7, delay: 0.3 }}
           className="flex flex-col sm:flex-row items-center justify-center gap-4"
         >
-          <Button variant="hero" size="lg" className="text-base px-8 py-6" onClick={() => setAuthOpen(true)}>
+          <Button variant="hero" size="lg" className="text-base px-8 py-6" onClick={handleGetStarted}>
             Start Building Free
             <ArrowRight className="w-4 h-4 ml-1" />
           </Button>

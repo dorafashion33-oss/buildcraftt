@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable/index";
 import { toast } from "sonner";
 import { Mail, Lock, User } from "lucide-react";
 
@@ -48,11 +49,10 @@ const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
   };
 
   const handleGoogleSignIn = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: window.location.origin },
+    const { error } = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin,
     });
-    if (error) toast.error(error.message);
+    if (error) toast.error(String(error));
   };
 
   return (
@@ -68,7 +68,6 @@ const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
         </DialogHeader>
 
         <div className="space-y-4 mt-4">
-          {/* Google Button */}
           <Button
             variant="outline"
             className="w-full h-12 text-sm font-medium gap-3"
@@ -92,20 +91,13 @@ const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
             </div>
           </div>
 
-          {/* Email Form */}
           <form onSubmit={handleEmailAuth} className="space-y-3">
             {isSignUp && (
               <div className="space-y-1.5">
                 <Label htmlFor="name" className="text-sm text-muted-foreground">Full Name</Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    id="name"
-                    placeholder="John Doe"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    className="pl-10 h-11 bg-muted border-border"
-                  />
+                  <Input id="name" placeholder="John Doe" value={fullName} onChange={(e) => setFullName(e.target.value)} className="pl-10 h-11 bg-muted border-border" />
                 </div>
               </div>
             )}
@@ -113,31 +105,14 @@ const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
               <Label htmlFor="email" className="text-sm text-muted-foreground">Email</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="pl-10 h-11 bg-muted border-border"
-                />
+                <Input id="email" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required className="pl-10 h-11 bg-muted border-border" />
               </div>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="password" className="text-sm text-muted-foreground">Password</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={6}
-                  className="pl-10 h-11 bg-muted border-border"
-                />
+                <Input id="password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className="pl-10 h-11 bg-muted border-border" />
               </div>
             </div>
             <Button variant="hero" className="w-full h-11" disabled={loading}>
@@ -147,10 +122,7 @@ const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
 
           <p className="text-center text-sm text-muted-foreground">
             {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
-            <button
-              onClick={() => setIsSignUp(!isSignUp)}
-              className="text-primary hover:underline font-medium"
-            >
+            <button onClick={() => setIsSignUp(!isSignUp)} className="text-primary hover:underline font-medium">
               {isSignUp ? "Sign In" : "Sign Up"}
             </button>
           </p>

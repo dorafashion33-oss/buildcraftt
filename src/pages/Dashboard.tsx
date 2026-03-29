@@ -9,10 +9,8 @@ import {
   Sparkles, LogOut, Code, Eye, Copy, Download, Rocket,
   Plus, Loader2, Clock, Zap, Lock, ChevronRight
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 
 const MAX_FREE_GENERATIONS = 5;
-const GENERATE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-app`;
 
 interface Project {
   id: string;
@@ -23,7 +21,6 @@ interface Project {
 
 const Dashboard = () => {
   const { user, signOut } = useAuth();
-  const navigate = useNavigate();
   const [prompt, setPrompt] = useState("");
   const [generating, setGenerating] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -61,71 +58,35 @@ const Dashboard = () => {
     setDeployed(false);
 
     try {
-      const resp = await fetch(GENERATE_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
-        body: JSON.stringify({ prompt: prompt.trim() }),
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Please sign in first");
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke("generate-app", {
+        body: { prompt: prompt.trim() },
       });
 
-      if (!resp.ok) {
-        const err = await resp.json();
-        throw new Error(err.error || "Generation failed");
-      }
+      if (error) throw new Error(error.message || "Generation failed");
 
-      const reader = resp.body!.getReader();
-      const decoder = new TextDecoder();
-      let fullCode = "";
-      let buffer = "";
+      const code = data?.code || "";
+      if (!code) throw new Error("No code was generated. Please try again.");
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-
-        let newlineIndex: number;
-        while ((newlineIndex = buffer.indexOf("\n")) !== -1) {
-          let line = buffer.slice(0, newlineIndex);
-          buffer = buffer.slice(newlineIndex + 1);
-          if (line.endsWith("\r")) line = line.slice(0, -1);
-          if (!line.startsWith("data: ")) continue;
-          const jsonStr = line.slice(6).trim();
-          if (jsonStr === "[DONE]") break;
-          try {
-            const parsed = JSON.parse(jsonStr);
-            const content = parsed.choices?.[0]?.delta?.content;
-            if (content) {
-              fullCode += content;
-              setGeneratedCode(fullCode);
-              setEditableCode(fullCode);
-            }
-          } catch {}
-        }
-      }
-
-      // Clean up code fences if present
-      let cleanCode = fullCode;
-      if (cleanCode.startsWith("```html")) cleanCode = cleanCode.slice(7);
-      else if (cleanCode.startsWith("```")) cleanCode = cleanCode.slice(3);
-      if (cleanCode.endsWith("```")) cleanCode = cleanCode.slice(0, -3);
-      cleanCode = cleanCode.trim();
-
-      setGeneratedCode(cleanCode);
-      setEditableCode(cleanCode);
+      setGeneratedCode(code);
+      setEditableCode(code);
 
       // Save to DB
-      const { data, error } = await supabase
+      const { data: project, error: dbError } = await supabase
         .from("projects")
-        .insert({ user_id: user!.id, prompt: prompt.trim(), generated_code: cleanCode })
+        .insert({ user_id: user!.id, prompt: prompt.trim(), generated_code: code })
         .select()
         .single();
 
-      if (error) throw error;
-      if (data) {
-        setSelectedProject(data);
-        setProjects(prev => [data, ...prev]);
+      if (dbError) throw dbError;
+      if (project) {
+        setSelectedProject(project);
+        setProjects(prev => [project, ...prev]);
       }
 
       toast.success("App generated successfully!");
@@ -165,8 +126,6 @@ const Dashboard = () => {
     setDeployed(true);
     toast.success("🚀 App deployed successfully!");
   };
-
-  const displayCode = viewMode === "preview" ? generatedCode : editableCode;
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -291,7 +250,6 @@ const Dashboard = () => {
         <div className="flex-1 relative">
           <AnimatePresence mode="wait">
             {!generatedCode && !generating ? (
-              /* Prompt Input */
               <motion.div
                 key="prompt"
                 initial={{ opacity: 0, y: 20 }}
@@ -326,7 +284,6 @@ const Dashboard = () => {
                       )}
                     </Button>
                   </div>
-                  {/* Quick Ideas */}
                   <div className="flex flex-wrap gap-2 justify-center pt-2">
                     {["SaaS landing page", "E-commerce store", "Portfolio website", "Blog platform"].map(idea => (
                       <button
@@ -340,8 +297,7 @@ const Dashboard = () => {
                   </div>
                 </div>
               </motion.div>
-            ) : generating && !generatedCode ? (
-              /* Loading */
+            ) : generating ? (
               <motion.div
                 key="loading"
                 initial={{ opacity: 0 }}
@@ -353,12 +309,11 @@ const Dashboard = () => {
                   <Loader2 className="w-10 h-10 text-primary animate-spin mx-auto" />
                   <div>
                     <p className="text-lg font-semibold">Building your app...</p>
-                    <p className="text-sm text-muted-foreground">AI is generating your website</p>
+                    <p className="text-sm text-muted-foreground">AI is generating your website. This may take 15-30 seconds.</p>
                   </div>
                 </div>
               </motion.div>
             ) : viewMode === "preview" ? (
-              /* Live Preview */
               <motion.div
                 key="preview"
                 initial={{ opacity: 0 }}
@@ -374,7 +329,6 @@ const Dashboard = () => {
                 />
               </motion.div>
             ) : (
-              /* Code Editor */
               <motion.div
                 key="code"
                 initial={{ opacity: 0 }}

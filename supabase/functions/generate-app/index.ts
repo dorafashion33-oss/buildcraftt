@@ -32,7 +32,8 @@ CRITICAL RULES:
 - Make it fully responsive with media queries.
 - Use Google Fonts via CDN link.
 - Add realistic placeholder content (not lorem ipsum).
-- The design should look like a real production website.`;
+- The design should look like a real production website.
+- Start directly with <!DOCTYPE html> - no other text before or after.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -46,30 +47,29 @@ CRITICAL RULES:
           { role: "system", content: systemPrompt },
           { role: "user", content: prompt },
         ],
-        stream: true,
+        stream: false,
       }),
     });
 
     if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted. Please add funds." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
       const t = await response.text();
       console.error("AI gateway error:", response.status, t);
-      return new Response(JSON.stringify({ error: "AI generation failed" }), {
+      return new Response(JSON.stringify({ error: "AI generation failed. Please try again." }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    return new Response(response.body, {
-      headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+    const data = await response.json();
+    let code = data.choices?.[0]?.message?.content || "";
+    
+    // Clean up code fences if present
+    if (code.startsWith("```html")) code = code.slice(7);
+    else if (code.startsWith("```")) code = code.slice(3);
+    if (code.endsWith("```")) code = code.slice(0, -3);
+    code = code.trim();
+
+    return new Response(JSON.stringify({ code }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("generate-app error:", e);

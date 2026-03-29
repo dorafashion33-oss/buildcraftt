@@ -65,7 +65,7 @@ const HeroSection = () => {
           transition={{ duration: 0.7, delay: 0.3 }}
           className="flex flex-col sm:flex-row items-center justify-center gap-4"
         >
-          <Button variant="hero" size="lg" className="text-base px-8 py-6" onClick={() => setAuthOpen(true)}>
+          <Button variant="hero" size="lg" className="text-base px-8 py-6" onClick={handleGetStarted}>
             Start Building Free
             <ArrowRight className="w-4 h-4 ml-1" />
           </Button>

@@ -14,18 +14,17 @@ const HeroSection = () => {
   const navigate = useNavigate();
 
   const handleGetStarted = () => {
-    if (user) {
-      navigate("/dashboard");
-    } else {
-      setAuthOpen(true);
-    }
+    if (user) navigate("/dashboard");
+    else setAuthOpen(true);
   };
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-      <div className="absolute inset-0 grid-pattern opacity-30" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] bg-primary/5 rounded-full blur-[120px]" />
-      <div className="absolute top-1/3 right-1/4 w-[400px] h-[400px] bg-accent/5 rounded-full blur-[100px]" />
+      {/* Background effects */}
+      <div className="absolute inset-0 bg-gradient-to-b from-background via-background to-background" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-gradient-to-b from-purple-600/8 via-blue-600/5 to-transparent rounded-full blur-[120px]" />
+      <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-gradient-to-tl from-orange-500/5 via-pink-500/5 to-transparent rounded-full blur-[100px]" />
+      <div className="absolute inset-0 grid-pattern opacity-20" />
 
       <div className="relative z-10 max-w-5xl mx-auto px-6 text-center">
         <motion.div
@@ -46,7 +45,7 @@ const HeroSection = () => {
         >
           Build apps with
           <br />
-          <span className="gradient-text">AI-powered</span> prompts
+          <span className="bg-gradient-to-r from-orange-400 via-pink-500 to-purple-500 bg-clip-text text-transparent">AI-powered</span> prompts
         </motion.h1>
 
         <motion.p
@@ -81,15 +80,15 @@ const HeroSection = () => {
           transition={{ duration: 0.9, delay: 0.5 }}
           className="mt-16 relative"
         >
-          <div className="gradient-border rounded-xl overflow-hidden bg-card">
-            <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
+          <div className="rounded-xl overflow-hidden bg-card border border-border/50 shadow-2xl shadow-purple-500/5">
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50">
               <div className="w-3 h-3 rounded-full bg-destructive/60" />
               <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(var(--dot-warning))' }} />
               <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(var(--dot-success))' }} />
               <span className="ml-3 text-xs font-mono text-muted-foreground">buildcraft — workspace</span>
             </div>
-            <div className="flex min-h-[340px]">
-              <div className="w-56 border-r border-border p-4 hidden md:block">
+            <div className="flex min-h-[300px] sm:min-h-[340px]">
+              <div className="w-48 border-r border-border/50 p-4 hidden md:block">
                 <div className="space-y-2">
                   {["index.tsx", "Header.tsx", "Hero.tsx", "Features.tsx", "api/"].map((f, i) => (
                     <div key={f} className={`text-sm font-mono px-3 py-1.5 rounded-md ${i === 2 ? 'bg-primary/10 text-primary' : 'text-muted-foreground'}`}>
@@ -126,12 +125,12 @@ const HeroSection = () => {
                   <span className="text-primary">▍</span>
                 </motion.div>
               </div>
-              <div className="w-72 border-l border-border hidden lg:flex flex-col">
-                <div className="px-3 py-2 border-b border-border text-xs font-mono text-muted-foreground">Preview</div>
+              <div className="w-64 border-l border-border/50 hidden lg:flex flex-col">
+                <div className="px-3 py-2 border-b border-border/50 text-xs font-mono text-muted-foreground">Preview</div>
                 <div className="flex-1 flex items-center justify-center p-4">
                   <div className="text-center">
-                    <div className="w-16 h-16 rounded-xl bg-primary/10 mx-auto mb-3 flex items-center justify-center">
-                      <Sparkles className="w-8 h-8 text-primary" />
+                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-orange-500/20 to-purple-600/20 mx-auto mb-3 flex items-center justify-center">
+                      <Sparkles className="w-7 h-7 text-primary" />
                     </div>
                     <p className="text-xs text-muted-foreground font-mono">Live preview</p>
                   </div>
@@ -139,7 +138,7 @@ const HeroSection = () => {
               </div>
             </div>
           </div>
-          <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 w-3/4 h-20 bg-primary/10 blur-[60px] rounded-full" />
+          <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 w-3/4 h-20 bg-purple-500/10 blur-[60px] rounded-full" />
         </motion.div>
       </div>
 

@@ -1,14 +1,15 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  Sparkles, LogOut, Code, Eye, Copy, Download, Rocket,
-  Plus, Loader2, Clock, Zap, Lock, ChevronRight
-} from "lucide-react";
+import { motion } from "framer-motion";
+import { Plus, Mic, ArrowUp, Lock, Sparkles } from "lucide-react";
+import DashboardNavbar from "@/components/DashboardNavbar";
+import DashboardSidebar from "@/components/DashboardSidebar";
+import ProjectCard from "@/components/ProjectCard";
+import ProjectEditor from "@/components/ProjectEditor";
+import { useNavigate } from "react-router-dom";
 
 const MAX_FREE_GENERATIONS = 5;
 
@@ -19,67 +20,66 @@ interface Project {
   created_at: string;
 }
 
+const TEMPLATES = [
+  { title: "SaaS Landing Page", desc: "Modern hero, pricing, features, testimonials", prompt: "A modern SaaS landing page with hero section, features grid, pricing table, testimonials, and CTA" },
+  { title: "E-Commerce Store", desc: "Product grid, cart, categories", prompt: "An e-commerce store with product grid, category filters, shopping cart, and checkout" },
+  { title: "Portfolio Website", desc: "Projects showcase, about, contact", prompt: "A creative portfolio website with project showcase, about section, skills, and contact form" },
+  { title: "Blog Platform", desc: "Articles, sidebar, newsletter", prompt: "A modern blog platform with article cards, sidebar, categories, and newsletter signup" },
+  { title: "Dashboard UI", desc: "Charts, stats, tables", prompt: "An analytics dashboard with charts, stat cards, data tables, and sidebar navigation" },
+  { title: "Restaurant Site", desc: "Menu, reservations, gallery", prompt: "A restaurant website with menu, reservation form, photo gallery, and location map" },
+];
+
 const Dashboard = () => {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [prompt, setPrompt] = useState("");
   const [generating, setGenerating] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  const [viewMode, setViewMode] = useState<"preview" | "code">("preview");
   const [generatedCode, setGeneratedCode] = useState("");
-  const [editableCode, setEditableCode] = useState("");
-  const [deployed, setDeployed] = useState(false);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [activeTab, setActiveTab] = useState<"projects" | "recent" | "templates">("projects");
 
   useEffect(() => {
     fetchProjects();
   }, []);
 
   const fetchProjects = async () => {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("projects")
       .select("*")
       .order("created_at", { ascending: false });
     if (data) setProjects(data);
-    if (error) console.error(error);
   };
 
   const usageCount = projects.length;
   const limitReached = usageCount >= MAX_FREE_GENERATIONS;
 
-  const handleGenerate = async () => {
-    if (!prompt.trim()) return toast.error("Please describe your app idea");
+  const handleGenerate = async (input?: string) => {
+    const text = input || prompt;
+    if (!text.trim()) return toast.error("Please describe your app idea");
     if (limitReached) return toast.error("Free limit reached! Upgrade to continue.");
     setGenerating(true);
     setGeneratedCode("");
-    setEditableCode("");
     setSelectedProject(null);
-    setViewMode("preview");
-    setDeployed(false);
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast.error("Please sign in first");
-        return;
-      }
+      if (!session) { toast.error("Please sign in"); return; }
 
       const { data, error } = await supabase.functions.invoke("generate-app", {
-        body: { prompt: prompt.trim() },
+        body: { prompt: text.trim() },
       });
-
       if (error) throw new Error(error.message || "Generation failed");
 
       const code = data?.code || "";
-      if (!code) throw new Error("No code was generated. Please try again.");
+      if (!code) throw new Error("No code generated. Try again.");
 
       setGeneratedCode(code);
-      setEditableCode(code);
 
-      // Save to DB
       const { data: project, error: dbError } = await supabase
         .from("projects")
-        .insert({ user_id: user!.id, prompt: prompt.trim(), generated_code: code })
+        .insert({ user_id: user!.id, prompt: text.trim(), generated_code: code })
         .select()
         .single();
 
@@ -89,7 +89,7 @@ const Dashboard = () => {
         setProjects(prev => [project, ...prev]);
       }
 
-      toast.success("App generated successfully!");
+      toast.success("App generated!");
       setPrompt("");
     } catch (e: any) {
       toast.error(e.message || "Failed to generate");
@@ -101,254 +101,173 @@ const Dashboard = () => {
   const handleSelectProject = (project: Project) => {
     setSelectedProject(project);
     setGeneratedCode(project.generated_code);
-    setEditableCode(project.generated_code);
-    setViewMode("preview");
-    setDeployed(false);
   };
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(editableCode);
-    toast.success("Code copied to clipboard!");
+  const handleNewProject = () => {
+    setSelectedProject(null);
+    setGeneratedCode("");
+    setPrompt("");
   };
 
-  const handleDownload = () => {
-    const blob = new Blob([editableCode], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "generated-app.html";
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success("Downloaded!");
-  };
+  const tabs = [
+    { key: "projects" as const, label: "My Projects" },
+    { key: "recent" as const, label: "Recently Viewed" },
+    { key: "templates" as const, label: "Templates" },
+  ];
 
-  const handleDeploy = () => {
-    setDeployed(true);
-    toast.success("🚀 App deployed successfully!");
-  };
+  // If a project is selected or generating, show editor view
+  if (selectedProject || generating) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <DashboardNavbar onMenuClick={() => setSidebarOpen(true)} onProfileClick={() => navigate("/settings")} />
+        <DashboardSidebar
+          open={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          projects={projects}
+          onSelectProject={handleSelectProject}
+          onNewProject={handleNewProject}
+        />
+        <ProjectEditor
+          project={selectedProject || { id: "", prompt: prompt, generated_code: "", created_at: new Date().toISOString() }}
+          generatedCode={generatedCode}
+          generating={generating}
+          onBack={handleNewProject}
+          onCodeChange={setGeneratedCode}
+        />
+      </div>
+    );
+  }
 
+  // Home view
   return (
-    <div className="min-h-screen bg-background flex">
-      {/* Sidebar */}
-      <aside className="w-72 border-r border-border/50 bg-card/50 backdrop-blur-xl flex flex-col">
-        <div className="p-4 border-b border-border/50">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-primary" />
-            </div>
-            <span className="text-lg font-bold tracking-tight">BuildCraft</span>
-          </div>
-          <Button
-            onClick={() => { setSelectedProject(null); setGeneratedCode(""); setEditableCode(""); setPrompt(""); }}
-            variant="hero"
-            className="w-full gap-2"
-            size="sm"
-          >
-            <Plus className="w-4 h-4" /> New Project
-          </Button>
-        </div>
+    <div className="min-h-screen bg-background flex flex-col relative overflow-hidden">
+      {/* Background glow */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-gradient-to-b from-purple-600/10 via-blue-600/5 to-transparent rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-gradient-to-tl from-orange-500/5 via-pink-500/5 to-transparent rounded-full blur-[100px] pointer-events-none" />
 
-        {/* Usage */}
-        <div className="p-4 border-b border-border/50">
-          <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
-            <span className="flex items-center gap-1"><Zap className="w-3 h-3" /> Usage</span>
-            <span>{usageCount}/{MAX_FREE_GENERATIONS}</span>
-          </div>
-          <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-            <div
-              className="h-full bg-primary rounded-full transition-all"
-              style={{ width: `${(usageCount / MAX_FREE_GENERATIONS) * 100}%` }}
+      <DashboardNavbar onMenuClick={() => setSidebarOpen(true)} onProfileClick={() => navigate("/settings")} />
+      <DashboardSidebar
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        projects={projects}
+        onSelectProject={handleSelectProject}
+        onNewProject={handleNewProject}
+      />
+
+      {/* Main content */}
+      <div className="flex-1 flex flex-col items-center justify-start pt-16 sm:pt-24 px-4 relative z-10">
+        {/* Greeting */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-8"
+        >
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+            What's on your mind?
+          </h1>
+        </motion.div>
+
+        {/* Input box */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="w-full max-w-2xl mb-8"
+        >
+          <div className="relative flex items-center rounded-2xl border border-border/50 bg-card/60 backdrop-blur-sm shadow-lg shadow-black/10 hover:border-border transition-colors">
+            <button className="p-3 text-muted-foreground hover:text-foreground transition-colors">
+              <Plus className="w-5 h-5" />
+            </button>
+            <input
+              type="text"
+              placeholder="Describe your app or website idea..."
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleGenerate()}
+              disabled={limitReached}
+              className="flex-1 bg-transparent border-0 text-sm sm:text-base text-foreground placeholder:text-muted-foreground focus:outline-none py-4 pr-2"
             />
+            <button className="p-3 text-muted-foreground hover:text-foreground transition-colors">
+              <Mic className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => handleGenerate()}
+              disabled={!prompt.trim() || limitReached || generating}
+              className="m-1.5 w-9 h-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <ArrowUp className="w-4 h-4" />
+            </button>
           </div>
           {limitReached && (
-            <p className="text-xs text-destructive mt-2 flex items-center gap-1">
-              <Lock className="w-3 h-3" /> Upgrade to unlock more
+            <p className="text-xs text-destructive mt-2 flex items-center gap-1 justify-center">
+              <Lock className="w-3 h-3" /> Free limit reached — upgrade to continue
             </p>
           )}
-        </div>
+        </motion.div>
 
-        {/* Projects */}
-        <div className="flex-1 overflow-y-auto p-2">
-          <p className="text-xs text-muted-foreground px-2 py-1 uppercase tracking-wider">Projects</p>
-          {projects.length === 0 ? (
-            <p className="text-xs text-muted-foreground px-2 py-4 text-center">No projects yet</p>
+        {/* Tabs */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          className="flex items-center gap-1 p-1 rounded-xl bg-muted/50 backdrop-blur-sm mb-8"
+        >
+          {tabs.map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                activeTab === tab.key
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </motion.div>
+
+        {/* Content */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="w-full max-w-5xl pb-12"
+        >
+          {activeTab === "templates" ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {TEMPLATES.map(t => (
+                <button
+                  key={t.title}
+                  onClick={() => { setPrompt(t.prompt); handleGenerate(t.prompt); }}
+                  className="group text-left rounded-xl border border-border/50 bg-card/40 backdrop-blur-sm p-5 hover:border-primary/30 hover:bg-card/60 transition-all"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500/20 to-purple-600/20 flex items-center justify-center mb-3">
+                    <Sparkles className="w-5 h-5 text-primary" />
+                  </div>
+                  <h3 className="font-medium text-foreground mb-1">{t.title}</h3>
+                  <p className="text-xs text-muted-foreground">{t.desc}</p>
+                </button>
+              ))}
+            </div>
           ) : (
-            projects.map(p => (
-              <button
-                key={p.id}
-                onClick={() => handleSelectProject(p)}
-                className={`w-full text-left px-3 py-2.5 rounded-lg text-sm mb-1 transition-colors flex items-center gap-2 group ${
-                  selectedProject?.id === p.id ? "bg-primary/10 text-primary" : "hover:bg-muted text-foreground"
-                }`}
-              >
-                <Clock className="w-3 h-3 shrink-0 text-muted-foreground" />
-                <span className="truncate flex-1">{p.prompt.slice(0, 40)}</span>
-                <ChevronRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-              </button>
-            ))
-          )}
-        </div>
-
-        {/* User */}
-        <div className="p-4 border-t border-border/50">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-primary">
-              {user?.email?.[0]?.toUpperCase() || "U"}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{user?.email}</p>
-              <p className="text-xs text-muted-foreground">Free Plan</p>
-            </div>
-            <Button variant="ghost" size="icon" onClick={signOut} className="shrink-0">
-              <LogOut className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col">
-        {/* Top Bar */}
-        {(generatedCode || generating) && (
-          <div className="h-12 border-b border-border/50 flex items-center px-4 gap-2 bg-card/30">
-            <Button
-              variant={viewMode === "preview" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setViewMode("preview")}
-              className="gap-1.5 text-xs"
-            >
-              <Eye className="w-3 h-3" /> Preview
-            </Button>
-            <Button
-              variant={viewMode === "code" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setViewMode("code")}
-              className="gap-1.5 text-xs"
-            >
-              <Code className="w-3 h-3" /> Code
-            </Button>
-            <div className="flex-1" />
-            <Button variant="ghost" size="sm" onClick={handleCopy} className="gap-1.5 text-xs">
-              <Copy className="w-3 h-3" /> Copy
-            </Button>
-            <Button variant="ghost" size="sm" onClick={handleDownload} className="gap-1.5 text-xs">
-              <Download className="w-3 h-3" /> Download
-            </Button>
-            <Button
-              variant="hero"
-              size="sm"
-              onClick={handleDeploy}
-              disabled={deployed}
-              className="gap-1.5 text-xs"
-            >
-              <Rocket className="w-3 h-3" /> {deployed ? "Deployed ✓" : "Deploy"}
-            </Button>
-          </div>
-        )}
-
-        {/* Content Area */}
-        <div className="flex-1 relative">
-          <AnimatePresence mode="wait">
-            {!generatedCode && !generating ? (
-              <motion.div
-                key="prompt"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="flex items-center justify-center h-full p-8"
-              >
-                <div className="max-w-2xl w-full space-y-6 text-center">
-                  <div className="space-y-2">
-                    <h1 className="text-4xl font-bold tracking-tight">What do you want to build?</h1>
-                    <p className="text-muted-foreground">Describe your app idea and AI will generate it instantly.</p>
-                  </div>
-                  <div className="space-y-3">
-                    <Textarea
-                      placeholder="e.g., A modern portfolio website for a photographer with a gallery, about section, and contact form..."
-                      value={prompt}
-                      onChange={(e) => setPrompt(e.target.value)}
-                      className="min-h-[120px] bg-card border-border/50 text-base resize-none"
-                      disabled={limitReached}
-                    />
-                    <Button
-                      variant="hero"
-                      size="lg"
-                      onClick={handleGenerate}
-                      disabled={generating || limitReached || !prompt.trim()}
-                      className="w-full gap-2 h-12 text-base"
-                    >
-                      {limitReached ? (
-                        <><Lock className="w-4 h-4" /> Upgrade to Generate</>
-                      ) : (
-                        <><Sparkles className="w-4 h-4" /> Generate App</>
-                      )}
-                    </Button>
-                  </div>
-                  <div className="flex flex-wrap gap-2 justify-center pt-2">
-                    {["SaaS landing page", "E-commerce store", "Portfolio website", "Blog platform"].map(idea => (
-                      <button
-                        key={idea}
-                        onClick={() => setPrompt(idea)}
-                        className="px-3 py-1.5 rounded-full text-xs border border-border/50 text-muted-foreground hover:text-foreground hover:border-primary/30 transition-colors"
-                      >
-                        {idea}
-                      </button>
-                    ))}
-                  </div>
+            projects.length === 0 ? (
+              <div className="text-center py-16">
+                <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-4">
+                  <Sparkles className="w-7 h-7 text-muted-foreground" />
                 </div>
-              </motion.div>
-            ) : generating ? (
-              <motion.div
-                key="loading"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="flex items-center justify-center h-full"
-              >
-                <div className="text-center space-y-4">
-                  <Loader2 className="w-10 h-10 text-primary animate-spin mx-auto" />
-                  <div>
-                    <p className="text-lg font-semibold">Building your app...</p>
-                    <p className="text-sm text-muted-foreground">AI is generating your website. This may take 15-30 seconds.</p>
-                  </div>
-                </div>
-              </motion.div>
-            ) : viewMode === "preview" ? (
-              <motion.div
-                key="preview"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="h-full"
-              >
-                <iframe
-                  ref={iframeRef}
-                  srcDoc={generatedCode}
-                  className="w-full h-full border-0 bg-white"
-                  sandbox="allow-scripts allow-same-origin"
-                  title="Live Preview"
-                />
-              </motion.div>
+                <p className="text-muted-foreground text-sm">No projects yet. Describe your idea above to get started!</p>
+              </div>
             ) : (
-              <motion.div
-                key="code"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="h-full"
-              >
-                <textarea
-                  value={editableCode}
-                  onChange={(e) => {
-                    setEditableCode(e.target.value);
-                    setGeneratedCode(e.target.value);
-                  }}
-                  className="w-full h-full bg-[#0d1117] text-[#c9d1d9] font-mono text-sm p-6 resize-none focus:outline-none"
-                  spellCheck={false}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </main>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {projects.map(p => (
+                  <ProjectCard key={p.id} project={p} onClick={() => handleSelectProject(p)} />
+                ))}
+              </div>
+            )
+          )}
+        </motion.div>
+      </div>
     </div>
   );
 };

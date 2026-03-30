@@ -59,11 +59,20 @@ const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-card border-border sm:max-w-md">
         <DialogHeader>
+          {/* BuildCraft branding */}
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500 to-purple-600 flex items-center justify-center">
+              <span className="text-sm font-bold text-white">B</span>
+            </div>
+            <span className="text-xl font-bold bg-gradient-to-r from-orange-400 to-purple-500 bg-clip-text text-transparent">
+              BuildCraft
+            </span>
+          </div>
           <DialogTitle className="text-2xl font-bold text-center">
             {isSignUp ? "Create your account" : "Welcome back"}
           </DialogTitle>
           <p className="text-sm text-muted-foreground text-center">
-            {isSignUp ? "Start building apps with AI" : "Sign in to continue"}
+            {isSignUp ? "Start building apps with BuildCraft AI" : "Sign in to your BuildCraft account"}
           </p>
         </DialogHeader>
 
